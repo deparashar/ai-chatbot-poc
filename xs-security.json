@@ -1,0 +1,24 @@
+{
+  "xsappname": "fiori-chat-poc",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    { "name": "$XSAPPNAME.user", "description": "Chat user" },
+    { "name": "$XSAPPNAME.admin", "description": "Admin — access logs and diagnostics" }
+  ],
+  "role-templates": [
+    { "name": "ChatUser", "scope-references": ["$XSAPPNAME.user"] },
+    { "name": "LogAdmin", "scope-references": ["$XSAPPNAME.user", "$XSAPPNAME.admin"] }
+  ],
+  "role-collections": [
+    {
+      "name": "Fiori Chat Admin",
+      "description": "Administrators with access to logs and diagnostics",
+      "role-template-references": ["$XSAPPNAME.LogAdmin"]
+    },
+    {
+      "name": "Fiori Chat User",
+      "description": "Regular chat users",
+      "role-template-references": ["$XSAPPNAME.ChatUser"]
+    }
+  ]
+}

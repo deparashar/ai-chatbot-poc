@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAP AI Assistant</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>SAP AI Assistant</h1>
+    <div class="header-actions">
+      <div id="tab-nav" class="tab-nav">
+        <button class="tab-btn active" data-tab="chat">Chat</button>
+        <button class="tab-btn" data-tab="logs" id="logs-tab-btn" style="display:none">Logs</button>
+      </div>
+      <button id="theme-toggle" aria-label="Toggle theme"></button>
+      <button id="clear-chat-btn" class="header-btn header-btn-secondary" aria-label="Clear chat">Clear</button>
+      <button id="new-chat-btn" class="header-btn" aria-label="Start a new chat">+ New Chat</button>
+    </div>
+  </header>
+
+  <!-- Chat tab -->
+  <div id="chat-panel" class="tab-panel active">
+    <div id="chat" role="log" aria-live="polite" aria-label="Chat messages"></div>
+
+    <button id="scroll-bottom" aria-label="Scroll to bottom">&#8595;</button>
+
+    <div id="turn-info"></div>
+
+    <div id="input-row">
+      <textarea
+        id="input"
+        placeholder="Ask about your SAP data..."
+        rows="1"
+        aria-label="Message input"
+      ></textarea>
+      <button id="send" aria-label="Send message">Send</button>
+    </div>
+    <span id="hint">Enter to send &middot; Shift+Enter for new line</span>
+  </div>
+
+  <!-- Logs tab (admin only) -->
+  <div id="logs-panel" class="tab-panel"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

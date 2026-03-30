@@ -1,0 +1,13 @@
+# Secrets
+.env
+.env.*
+
+# Dependencies (CF runs npm install)
+node_modules/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+*.swp

@@ -1,0 +1,133 @@
+_schema-version: "3.1"
+ID: fiori-chat-poc
+description: Fiori AI Chatbot with SAP OData MCP Server — Client POC
+version: 1.0.0
+
+parameters:
+  enable-parallel-deployments: true
+
+modules:
+
+  # ── MCP Server (SAP OData → MCP bridge) ─────────────────────────────────────
+  - name: sap-mcp-server
+    type: nodejs
+    path: sap-mcp-server
+    parameters:
+      app-name: sap-mcp-server-${space}
+      memory: 512M
+      disk-quota: 1G
+      buildpack: nodejs_buildpack
+      command: npm run start
+      health-check-type: http
+      health-check-http-endpoint: /health
+      timeout: 180
+    properties:
+      LOG_LEVEL: info
+      # ODATA_MAX_SERVICES and ODATA_SERVICE_PATTERNS set via cf set-env after deploy
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+      ignore:
+        - node_modules/
+        - dist/
+        - .git/
+        - mta_archives/
+    requires:
+      - name: poc-destination
+      - name: poc-connectivity
+      - name: poc-mcp-xsuaa
+    provides:
+      - name: sap-mcp-server-api
+        properties:
+          url: ${default-url}
+
+  # ── MCP Client Backend (also serves static UI) ───────────────────────────────
+  - name: fiori-chat-mcp-client
+    type: nodejs
+    path: fiori-chat-mcp-client
+    parameters:
+      disk-quota: 512M
+      memory: 256M
+    properties:
+      MCP_SERVER_URL: ~{sap-mcp-server-api/url}
+      LLM_BASE_URL: https://api.openai.com/v1
+      LLM_MODEL: gpt-4o-mini
+      # Secrets set via cf set-env after deploy:
+      #   LLM_API_KEY        — client's OpenAI API key
+      #   MCP_CLIENT_ID      — XSUAA client ID for MCP server
+      #   MCP_CLIENT_SECRET  — XSUAA client secret for MCP server
+    build-parameters:
+      ignore:
+        - node_modules/
+    requires:
+      - name: poc-chat-xsuaa
+      - name: sap-mcp-server-api
+    provides:
+      - name: fiori-chat-mcp-client-api
+        properties:
+          url: ${default-url}
+
+  # ── App Router ───────────────────────────────────────────────────────────────
+  - name: fiori-chat-router
+    type: approuter.nodejs
+    path: fiori-chat-router
+    parameters:
+      disk-quota: 256M
+      memory: 128M
+    requires:
+      - name: poc-chat-xsuaa
+      - name: fiori-chat-mcp-client-api
+        group: destinations
+        properties:
+          name: mcp-client-backend
+          url: ~{url}
+          forwardAuthToken: true
+          timeout: 120000
+    provides:
+      - name: fiori-chat-router-url
+        properties:
+          url: ${default-url}
+
+resources:
+
+  # ── Destination service (for MCP server to reach SAP ABAP system) ───────────
+  - name: poc-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      service-name: poc-destination-${space}
+
+  # ── Connectivity service (for on-premise ABAP via Cloud Connector) ───────────
+  - name: poc-connectivity
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: connectivity
+      service-plan: lite
+      service-name: poc-connectivity-${space}
+
+  # ── XSUAA for MCP Server ─────────────────────────────────────────────────────
+  - name: poc-mcp-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      service-name: poc-mcp-xsuaa-${space}
+      path: ./sap-mcp-server/xs-security.json
+      config:
+        xsappname: sap-mcp-server-${space}
+        tenant-mode: dedicated
+
+  # ── XSUAA for Chat App ───────────────────────────────────────────────────────
+  - name: poc-chat-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      service-name: poc-chat-xsuaa-${space}
+      path: ./xs-security.json
+      config:
+        xsappname: fiori-chat-poc-${space}
+        tenant-mode: dedicated

@@ -1,0 +1,30 @@
+{
+  "authenticationMethod": "route",
+  "responseHeaders": [
+    {
+      "name": "Content-Security-Policy",
+      "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
+    }
+  ],
+  "routes": [
+    {
+      "source": "^/admin/(.*)$",
+      "target": "/admin/$1",
+      "destination": "mcp-client-backend",
+      "authenticationType": "xsuaa",
+      "scope": "$XSAPPNAME.admin"
+    },
+    {
+      "source": "^/api/(.*)$",
+      "target": "/$1",
+      "destination": "mcp-client-backend",
+      "authenticationType": "xsuaa"
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "destination": "mcp-client-backend",
+      "authenticationType": "xsuaa"
+    }
+  ]
+}
