@@ -4,8 +4,6 @@
 **Date:** 22 June 2026
 **Author:** Deepak Parashar
 **Status:** Deployed on SAP BTP Cloud Foundry (Scania PoC Sandbox)
-**Repository:** https://github.com/deparashar/ai-chatbot-poc
-
 ---
 
 ## 1. Overview
@@ -774,7 +772,6 @@ No npm dependencies. Zero external scripts or CDN resources.
 | Resource | URL |
 |----------|-----|
 | App (entry point) | https://scania-ieb---poc-sbx-sbx-fiori-chat-router.cfapps.eu10-004.hana.ondemand.com |
-| GitHub Repository | https://github.com/deparashar/ai-chatbot-poc |
 | MCP Server (open-source) | https://github.com/lemaiwo/btp-sap-odata-to-mcp-server |
 | OpenAI API Docs | https://platform.openai.com/docs |
 | MCP Specification | https://modelcontextprotocol.io |
