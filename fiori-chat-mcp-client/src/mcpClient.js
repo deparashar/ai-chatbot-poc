@@ -4,9 +4,16 @@ const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL;
-const UAA_URL = process.env.MCP_UAA_URL || 'https://a62a414ctrial.authentication.ap21.hana.ondemand.com';
-const MCP_CLIENT_ID = process.env.MCP_CLIENT_ID;
-const MCP_CLIENT_SECRET = process.env.MCP_CLIENT_SECRET;
+
+// UAA_URL, MCP_CLIENT_ID and MCP_CLIENT_SECRET are loaded at startup by
+// credstoreClient.initSecrets() — read lazily so they're available after init.
+function getMcpConfig() {
+  return {
+    uaaUrl: process.env.MCP_UAA_URL,
+    clientId: process.env.MCP_CLIENT_ID,
+    clientSecret: process.env.MCP_CLIENT_SECRET,
+  };
+}
 
 // ── Global: token cache (tokens valid 12h, refresh at 80%) ──────────────────
 let cachedToken = null;
@@ -24,8 +31,13 @@ async function getMcpToken() {
   const now = Date.now();
   if (cachedToken && now < tokenExpiresAt) return cachedToken;
 
-  const creds = Buffer.from(`${MCP_CLIENT_ID}:${MCP_CLIENT_SECRET}`).toString('base64');
-  const resp = await fetch(`${UAA_URL}/oauth/token`, {
+  const { uaaUrl, clientId, clientSecret } = getMcpConfig();
+  if (!uaaUrl || !clientId || !clientSecret) {
+    throw new Error('MCP credentials not initialised — check Credential Store bindings');
+  }
+
+  const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const resp = await fetch(`${uaaUrl}/oauth/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

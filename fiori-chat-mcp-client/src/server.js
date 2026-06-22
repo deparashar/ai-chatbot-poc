@@ -5,6 +5,7 @@ const { getLogs, getStats, clearLogs } = require('./logBuffer');
 
 require('dotenv').config();
 
+const { initSecrets } = require('./credstoreClient');
 const express = require('express');
 const cors = require('cors');
 const { handleChat, clearSession, softResetSession } = require('./chatHandler');
@@ -120,8 +121,16 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`MCP Client listening on port ${PORT}`);
-  console.log(`MCP Server: ${process.env.MCP_SERVER_URL}`);
-  console.log(`LLM Model:  ${process.env.LLM_MODEL}`);
-});
+// Load secrets from Credential Store before accepting traffic
+initSecrets()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`MCP Client listening on port ${PORT}`);
+      console.log(`MCP Server: ${process.env.MCP_SERVER_URL}`);
+      console.log(`LLM Model:  ${process.env.LLM_MODEL}`);
+    });
+  })
+  .catch((err) => {
+    console.error('[Startup] Failed to load secrets from Credential Store:', err.message);
+    process.exit(1);
+  });

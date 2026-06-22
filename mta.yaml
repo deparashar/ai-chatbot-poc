@@ -23,7 +23,10 @@ modules:
       timeout: 180
     properties:
       LOG_LEVEL: info
-      # ODATA_MAX_SERVICES and ODATA_SERVICE_PATTERNS set via cf set-env after deploy
+      # After deploy, set via cf set-env:
+      #   ODATA_MAX_SERVICES     — e.g. 200
+      #   ODATA_SERVICE_PATTERNS — e.g. Z* (client-specific pattern)
+      #   DESTINATION_NAME       — name of the BTP Destination pointing to client ABAP system
     build-parameters:
       builder: custom
       commands:
@@ -31,13 +34,12 @@ modules:
         - npm run build
       ignore:
         - node_modules/
-        - dist/
         - .git/
         - mta_archives/
     requires:
-      - name: poc-destination
-      - name: poc-connectivity
-      - name: poc-mcp-xsuaa
+      - name: sap-mcp-destination-SBX
+      - name: sap-mcp-connectivity-SBX
+      - name: sap-mcp-xsuaa-SBX
     provides:
       - name: sap-mcp-server-api
         properties:
@@ -54,10 +56,10 @@ modules:
       MCP_SERVER_URL: ~{sap-mcp-server-api/url}
       LLM_BASE_URL: https://api.openai.com/v1
       LLM_MODEL: gpt-4o-mini
-      # Secrets set via cf set-env after deploy:
+      # After deploy, set via cf set-env:
       #   LLM_API_KEY        — client's OpenAI API key
-      #   MCP_CLIENT_ID      — XSUAA client ID for MCP server
-      #   MCP_CLIENT_SECRET  — XSUAA client secret for MCP server
+      #   MCP_CLIENT_ID      — XSUAA client ID (from sap-mcp-xsuaa-SBX service key)
+      #   MCP_CLIENT_SECRET  — XSUAA client secret (from sap-mcp-xsuaa-SBX service key)
     build-parameters:
       ignore:
         - node_modules/
@@ -92,35 +94,17 @@ modules:
 
 resources:
 
-  # ── Destination service (for MCP server to reach SAP ABAP system) ───────────
-  - name: poc-destination
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: destination
-      service-plan: lite
-      service-name: poc-destination-${space}
+  # ── Reuse existing MCP server services (already deployed in SBX) ─────────────
+  - name: sap-mcp-destination-SBX
+    type: org.cloudfoundry.existing-service
 
-  # ── Connectivity service (for on-premise ABAP via Cloud Connector) ───────────
-  - name: poc-connectivity
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: connectivity
-      service-plan: lite
-      service-name: poc-connectivity-${space}
+  - name: sap-mcp-connectivity-SBX
+    type: org.cloudfoundry.existing-service
 
-  # ── XSUAA for MCP Server ─────────────────────────────────────────────────────
-  - name: poc-mcp-xsuaa
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: xsuaa
-      service-plan: application
-      service-name: poc-mcp-xsuaa-${space}
-      path: ./sap-mcp-server/xs-security.json
-      config:
-        xsappname: sap-mcp-server-${space}
-        tenant-mode: dedicated
+  - name: sap-mcp-xsuaa-SBX
+    type: org.cloudfoundry.existing-service
 
-  # ── XSUAA for Chat App ───────────────────────────────────────────────────────
+  # ── New XSUAA for Chat App ───────────────────────────────────────────────────
   - name: poc-chat-xsuaa
     type: org.cloudfoundry.managed-service
     parameters:

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How It Works - Simple Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .slide { width: 1280px; height: 720px; background: #ffffff; }
+</style>
+</head>
+<body>
+<div class="slide">
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#162d4a"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0891b2"/><stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64748b"/><stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="10" markerHeight="7" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrTeal" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="10" markerHeight="7" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0891b2"/>
+    </marker>
+    <marker id="arrGreen" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="10" markerHeight="7" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+    </marker>
+    <filter id="sh">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="640" y="44" text-anchor="middle" font-size="26" font-weight="700" fill="#1e3a5f">How the SAP AI Chat Works</text>
+  <text x="640" y="68" text-anchor="middle" font-size="14" fill="#94a3b8">Since ChatGPT Enterprise blocks MCP connections, we built our own orchestrator</text>
+
+  <!-- Callout boxes — single line each, well within bounds -->
+  <rect x="100" y="90" width="430" height="40" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="116" y="115" fill="#2563eb" font-size="15">💡</text>
+  <text x="138" y="115" fill="#1e40af" font-size="12" font-weight="600">What we built:</text>
+  <text x="250" y="115" fill="#3b82f6" font-size="11">What ChatGPT does natively with MCP — as our own web app</text>
+
+  <rect x="750" y="90" width="330" height="40" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="766" y="115" fill="#dc2626" font-size="15">🚫</text>
+  <text x="788" y="115" fill="#991b1b" font-size="12" font-weight="600">ChatGPT Enterprise:</text>
+  <text x="920" y="115" fill="#b91c1c" font-size="11">MCP blocked by IT policy</text>
+
+  <!-- ================================================================ -->
+  <!-- ROW 1 — Y center = 240                                           -->
+  <!-- 4 boxes: 190w each, gaps of 110px for arrow labels               -->
+  <!-- x: 70, 370, 670, 970                                             -->
+  <!-- ================================================================ -->
+
+  <!-- YOU -->
+  <g filter="url(#sh)">
+    <rect x="70" y="170" width="190" height="140" rx="14" fill="url(#dark)"/>
+    <circle cx="165" cy="210" r="16" fill="none" stroke="#93c5fd" stroke-width="1.5"/>
+    <circle cx="165" cy="205" r="6" fill="#93c5fd"/>
+    <path d="M155 221 Q165 229 175 221" fill="none" stroke="#93c5fd" stroke-width="1.5"/>
+    <text x="165" y="254" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="600">You</text>
+    <text x="165" y="274" text-anchor="middle" fill="#93c5fd" font-size="11">"Show me 5 billing</text>
+    <text x="165" y="290" text-anchor="middle" fill="#93c5fd" font-size="11">documents"</text>
+  </g>
+
+  <!-- Arrow: You -> Web App -->
+  <line x1="260" y1="240" x2="366" y2="240" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arr)"/>
+  <text x="313" y="230" text-anchor="middle" fill="#64748b" font-size="10">question</text>
+
+  <!-- OUR WEB APP -->
+  <g filter="url(#sh)">
+    <rect x="350" y="170" width="230" height="140" rx="14" fill="url(#blue)"/>
+    <text x="465" y="204" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="600">Our Web App</text>
+    <text x="465" y="222" text-anchor="middle" fill="#dbeafe" font-size="11">(MCP Client)</text>
+    <line x1="375" y1="232" x2="555" y2="232" stroke="#fff" stroke-opacity="0.15"/>
+    <text x="465" y="252" text-anchor="middle" fill="#dbeafe" font-size="11">Receives your question</text>
+    <text x="465" y="270" text-anchor="middle" fill="#dbeafe" font-size="11">Orchestrates everything</text>
+    <text x="465" y="288" text-anchor="middle" fill="#dbeafe" font-size="11">Returns the answer</text>
+  </g>
+
+  <!-- Arrow: Web App -> OpenAI -->
+  <line x1="580" y1="222" x2="666" y2="222" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arr)"/>
+  <text x="613" y="212" text-anchor="middle" fill="#64748b" font-size="10">ask + tools</text>
+
+  <!-- Arrow: OpenAI -> Web App (return) -->
+  <line x1="666" y1="258" x2="584" y2="258" stroke="#16a34a" stroke-width="2" marker-end="url(#arrGreen)"/>
+  <text x="615" y="276" text-anchor="middle" fill="#16a34a" font-size="10">"call this tool"</text>
+
+  <!-- OPENAI -->
+  <g filter="url(#sh)">
+    <rect x="670" y="170" width="190" height="140" rx="14" fill="url(#dark)"/>
+    <text x="765" y="204" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="600">OpenAI API</text>
+    <text x="765" y="222" text-anchor="middle" fill="#93c5fd" font-size="12">GPT-5.4 Mini</text>
+    <line x1="695" y1="232" x2="835" y2="232" stroke="#fff" stroke-opacity="0.15"/>
+    <text x="765" y="252" text-anchor="middle" fill="#93c5fd" font-size="11">Understands your question</text>
+    <text x="765" y="270" text-anchor="middle" fill="#93c5fd" font-size="11">Decides what data to fetch</text>
+    <text x="765" y="288" text-anchor="middle" fill="#93c5fd" font-size="11">Formats the final answer</text>
+  </g>
+
+  <!-- ================================================================ -->
+  <!-- ROW 2 — Y center = 480                                           -->
+  <!-- Centered under Web App (x=370) and right of it (x=670)           -->
+  <!-- ================================================================ -->
+
+  <!-- Arrow DOWN: Web App -> MCP Server -->
+  <line x1="465" y1="310" x2="465" y2="406" stroke="#0891b2" stroke-width="2.5" marker-end="url(#arrTeal)"/>
+  <text x="488" y="358" fill="#0891b2" font-size="10" font-weight="500">tool call</text>
+
+  <!-- MCP SERVER -->
+  <g filter="url(#sh)">
+    <rect x="370" y="410" width="190" height="140" rx="14" fill="url(#teal)"/>
+    <text x="465" y="444" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="600">MCP Server</text>
+    <text x="465" y="462" text-anchor="middle" fill="#a5f3fc" font-size="11">(SAP Data Bridge)</text>
+    <line x1="395" y1="472" x2="535" y2="472" stroke="#fff" stroke-opacity="0.15"/>
+    <text x="465" y="492" text-anchor="middle" fill="#cffafe" font-size="11">Knows all SAP services</text>
+    <text x="465" y="510" text-anchor="middle" fill="#cffafe" font-size="11">Fetches the actual data</text>
+    <text x="465" y="528" text-anchor="middle" fill="#cffafe" font-size="11">Returns raw results</text>
+  </g>
+
+  <!-- Arrow: MCP Server -> SAP -->
+  <line x1="560" y1="480" x2="666" y2="480" stroke="#0891b2" stroke-width="2.5" marker-end="url(#arrTeal)"/>
+  <text x="613" y="470" text-anchor="middle" fill="#0891b2" font-size="10" font-weight="500">OData API</text>
+
+  <!-- SAP S/4HANA -->
+  <g filter="url(#sh)">
+    <rect x="670" y="410" width="190" height="140" rx="14" fill="url(#slate)"/>
+    <text x="765" y="444" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="600">SAP S/4HANA</text>
+    <text x="765" y="462" text-anchor="middle" fill="#cbd5e1" font-size="11">(Your Business Data)</text>
+    <line x1="695" y1="472" x2="835" y2="472" stroke="#fff" stroke-opacity="0.15"/>
+    <text x="765" y="492" text-anchor="middle" fill="#e2e8f0" font-size="11">Business Partners</text>
+    <text x="765" y="510" text-anchor="middle" fill="#e2e8f0" font-size="11">Billing Documents</text>
+    <text x="765" y="528" text-anchor="middle" fill="#e2e8f0" font-size="11">Inbound Deliveries</text>
+  </g>
+
+  <!-- ================================================================ -->
+  <!-- BOTTOM SUMMARY -->
+  <!-- ================================================================ -->
+  <rect x="100" y="590" width="1080" height="90" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="640" y="618" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a5f">In Simple Terms</text>
+  <text x="640" y="644" text-anchor="middle" font-size="13" fill="#475569">
+    You ask a question  →  Our app sends it to OpenAI  →  OpenAI says "I need SAP data"
+  </text>
+  <text x="640" y="664" text-anchor="middle" font-size="13" fill="#475569">
+    →  Our app fetches it from SAP via MCP Server  →  you get a clean answer
+  </text>
+
+</svg>
+</div>
+</body>
+</html>

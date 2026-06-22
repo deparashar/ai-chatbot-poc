@@ -3,16 +3,16 @@
 const { getTools, getOrCreateSession, releaseSession, callTool } = require('./mcpClient');
 const { chat, toOpenAITools } = require('./llmClient');
 
-const MAX_TOOL_ROUNDS = 5;
+const MAX_TOOL_ROUNDS = 6;
 const MAX_TURNS = 20;
-const CONTEXT_WINDOW = 8;           // send only last 8 messages (4 exchanges) to LLM
+const CONTEXT_WINDOW = 64;           // 32 exchanges — keep service discoveries in context
 const SESSION_TTL_MS = 60 * 60 * 1000;
-const TRUNCATE_LIMIT = 4000;
+const TRUNCATE_LIMIT = 16000;
 
 // ── Session store ────────────────────────────────────────────────────────────
 const sessions = new Map();
 
-// Prune expired sessions every 5 minutes (not on every request)
+// Prune expired sessions every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [id, s] of sessions) {
@@ -23,52 +23,43 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-// ── Service catalog cache (pre-loaded once, saves 1 LLM roundtrip) ──────────
-let catalogCache = null;
-let catalogServiceIds = [];   // extracted serviceId list for fuzzy matching
+// ── ServiceId fuzzy matching ────────────────────────────────────────────────
+let catalogServiceIds = [];
 
-async function getServiceCatalog(sessionId) {
-  if (catalogCache) return catalogCache;
+/**
+ * Lazily capture serviceIds from discover-sap-data results.
+ * Called after every tool result — no separate warm-up call needed.
+ */
+function captureServiceIds(toolName, resultText) {
+  if (toolName !== 'discover-sap-data') return;
   try {
-    const result = await callTool(sessionId, 'discover-sap-data', { limit: 20 });
-    catalogCache = result;
-    // Extract serviceId list for fuzzy matching
-    try {
-      const parsed = JSON.parse(result);
-      const services = Array.isArray(parsed) ? parsed : (parsed.services || parsed.results || []);
-      catalogServiceIds = services.map(s => s.serviceId || s.id || s.name).filter(Boolean);
-    } catch { /* not JSON — try regex fallback */
-      const matches = result.matchAll(/"serviceId"\s*:\s*"([^"]+)"/g);
-      catalogServiceIds = [...matches].map(m => m[1]);
+    const matches = resultText.matchAll(/"serviceId"\s*:\s*"([^"]+)"/g);
+    const ids = [...matches].map(m => m[1]);
+    if (ids.length > 0) {
+      catalogServiceIds = ids;
+      console.log(`[Catalog] Captured ${ids.length} service IDs from discover result`);
     }
-    console.log(`[Catalog] Pre-loaded ${catalogServiceIds.length} service IDs`);
-    return catalogCache;
-  } catch (err) {
-    console.warn('[Catalog] Failed to pre-fetch:', err.message);
-    return null;
-  }
+  } catch { /* ignore */ }
 }
 
 /**
- * Fuzzy-resolve a serviceId against the catalog.
- * The LLM often strips the _0001 suffix (e.g. "ZSB_CONTACT_UI_O2" instead of
- * "ZSB_CONTACT_UI_O2_0001"). This finds the best match from known serviceIds.
+ * Fuzzy-resolve a serviceId against known IDs.
+ * The LLM often drops the _0001 suffix. This fixes it silently.
  */
 function resolveServiceId(rawId) {
   if (!rawId || catalogServiceIds.length === 0) return rawId;
-  // Exact match — return as-is
   if (catalogServiceIds.includes(rawId)) return rawId;
-  // Case-insensitive exact match
+
   const lower = rawId.toLowerCase();
   const exact = catalogServiceIds.find(id => id.toLowerCase() === lower);
   if (exact) return exact;
-  // Prefix match: rawId is a prefix of a catalog entry (e.g. missing _0001)
+
   const prefixMatch = catalogServiceIds.find(id => id.toLowerCase().startsWith(lower));
   if (prefixMatch) {
     console.log(`[Catalog] Fuzzy-resolved "${rawId}" → "${prefixMatch}"`);
     return prefixMatch;
   }
-  // Contains match (rawId contained within a catalog entry)
+
   const containsMatch = catalogServiceIds.find(id => id.toLowerCase().includes(lower));
   if (containsMatch) {
     console.log(`[Catalog] Fuzzy-resolved "${rawId}" → "${containsMatch}"`);
@@ -77,14 +68,131 @@ function resolveServiceId(rawId) {
   return rawId;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── SAP value formatting ────────────────────────────────────────────────────
 
+function formatSAPValue(key, value) {
+  if (typeof value === 'string') {
+    // /Date(1692057600000)/ or /Date(1702028968672+0000)/ → 2023-08-15
+    const dateMatch = value.match(/^\/Date\((-?\d+)([+-]\d+)?\)\/$/);
+    if (dateMatch) {
+      const d = new Date(parseInt(dateMatch[1], 10));
+      return d.toISOString().split('T')[0];
+    }
+    // PT08H37M24S (ISO 8601 duration / SAP time) → 08:37:24
+    const timeMatch = value.match(/^PT(\d+)H(\d+)M(\d+)S$/);
+    if (timeMatch) {
+      return `${timeMatch[1].padStart(2, '0')}:${timeMatch[2].padStart(2, '0')}:${timeMatch[3].padStart(2, '0')}`;
+    }
+  }
+  return value;
+}
+
+/**
+ * Clean OData results: convert SAP formats, strip metadata/nav links.
+ * KEY PRINCIPLE: drop FIELDS to fit limit, NEVER drop RECORDS.
+ */
 function smartTruncate(text, limit = TRUNCATE_LIMIT) {
+  try {
+    const jsonStart = text.indexOf('{');
+    if (jsonStart === -1) throw new Error('not JSON');
+
+    const prefix = text.substring(0, jsonStart);
+    const jsonText = text.substring(jsonStart);
+    const data = JSON.parse(jsonText);
+    const results = data?.d?.results;
+
+    if (Array.isArray(results) && results.length > 0) {
+      // Phase 1: Clean each record — convert dates/times, strip metadata
+      const cleaned = results.map(r => {
+        const clean = {};
+        for (const [k, v] of Object.entries(r)) {
+          if (k === '__metadata') continue;
+          if (v && typeof v === 'object' && v.__deferred) continue;
+          if (v === null || v === '') continue;
+          clean[k] = formatSAPValue(k, v);
+        }
+        return clean;
+      });
+
+      // Check if it fits
+      let candidate = prefix + JSON.stringify({ d: { results: cleaned } });
+      if (candidate.length <= limit) return candidate;
+
+      // Phase 2: Drop fields to fit — remove least-useful fields from ALL records
+      // Score fields: booleans and single-char values are least useful
+      const allKeys = [...new Set(cleaned.flatMap(r => Object.keys(r)))];
+      const fieldScores = allKeys.map(key => {
+        const sampleVal = cleaned.find(r => r[key] !== undefined)?.[key];
+        let score = 50; // default
+        // Key/ID fields — keep
+        if (/Document|Partner|Order|Delivery|ID$|Number/i.test(key)) score = 100;
+        // Business values — keep
+        if (/Amount|Price|Quantity|Currency|Name|Description/i.test(key)) score = 90;
+        // Dates — keep
+        if (/Date/i.test(key)) score = 85;
+        // Org fields — medium
+        if (/Organization|Channel|Division|Plant|Company/i.test(key)) score = 60;
+        // Status/flags — low
+        if (/Status|Category|Indicator|IsRelevant|Block|Reason/i.test(key)) score = 20;
+        // Booleans — lowest
+        if (typeof sampleVal === 'boolean') score = 10;
+        // Single-char coded values — low
+        if (typeof sampleVal === 'string' && sampleVal.length === 1) score = 15;
+        return { key, score };
+      });
+
+      // Sort by score descending — drop lowest-scored fields first
+      fieldScores.sort((a, b) => b.score - a.score);
+
+      let keepFields = fieldScores.map(f => f.key);
+      while (keepFields.length > 3) {
+        const pruned = cleaned.map(r => {
+          const p = {};
+          for (const k of keepFields) {
+            if (r[k] !== undefined) p[k] = r[k];
+          }
+          return p;
+        });
+        candidate = prefix + JSON.stringify({ d: { results: pruned } });
+        if (candidate.length <= limit) return candidate;
+        // Drop the lowest-scored remaining field
+        keepFields = keepFields.slice(0, keepFields.length - 1);
+      }
+
+      // Phase 3: Still too big with only 3 fields — return what we can
+      const minimal = cleaned.map(r => {
+        const m = {};
+        for (const k of keepFields) {
+          if (r[k] !== undefined) m[k] = r[k];
+        }
+        return m;
+      });
+      return prefix + JSON.stringify({ d: { results: minimal } });
+    }
+
+    // Single entity (not array) — clean and return
+    if (data?.d && !Array.isArray(data.d)) {
+      const clean = {};
+      for (const [k, v] of Object.entries(data.d)) {
+        if (k === '__metadata') continue;
+        if (v && typeof v === 'object') continue;
+        if (v === null || v === '') continue;
+        clean[k] = formatSAPValue(k, v);
+      }
+      return prefix + JSON.stringify(clean);
+    }
+  } catch {
+    // Not OData JSON — fall through
+  }
+
+  // Fallback: simple truncation at JSON boundary
   if (text.length <= limit) return text;
   const cut = text.lastIndexOf('}', limit);
   const pos = cut > limit * 0.5 ? cut + 1 : limit;
   return text.substring(0, pos) + '\n...[truncated]';
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getSession(sessionId) {
   if (!sessions.has(sessionId)) {
@@ -117,48 +225,6 @@ function parseToolArgs(raw) {
     if (typeof input[field] === 'string') input[field] = parseInt(input[field], 10);
   }
   return input;
-}
-
-// ── Auto-chain: enrich get-entity-metadata results with actual data ─────────
-// When the LLM calls get-entity-metadata and the user wants records,
-// we auto-fetch the data so the LLM can format everything in one response.
-
-const DATA_INTENT_RE = /show|fetch|read|list|give|get|display|record|booking|customer|order|product|travel|data|entries|items|rows/i;
-
-function extractEntityName(metadataText) {
-  try {
-    const data = JSON.parse(metadataText);
-    const entities = Array.isArray(data) ? data
-      : data.entities || data.entitySets || data.results || [];
-    if (entities.length > 0) {
-      return entities[0].name || entities[0].entityName || entities[0].Name || null;
-    }
-  } catch {}
-  const match = metadataText.match(/"(?:name|entityName|entity_name)"\s*:\s*"([^"]+)"/);
-  return match ? match[1] : null;
-}
-
-async function tryAutoChain(sessionId, toolName, toolInput, result, userMessage) {
-  // Only auto-chain after get-entity-metadata when user wants actual data
-  if (toolName !== 'get-entity-metadata') return result;
-  if (!DATA_INTENT_RE.test(userMessage)) return result;
-
-  const entityName = extractEntityName(result);
-  if (!entityName) return result;
-
-  try {
-    console.log(`[Auto-chain] Fetching records: ${toolInput.serviceId} / ${entityName}`);
-    const data = await callTool(sessionId, 'execute-sap-operation', {
-      serviceId: toolInput.serviceId,
-      entityName,
-      operation: 'read',
-      topNumber: 5,
-    });
-    return `${result}\n\n--- Auto-fetched first 5 records from "${entityName}" ---\n${data}`;
-  } catch (err) {
-    console.warn(`[Auto-chain] Failed:`, err.message);
-    return result;
-  }
 }
 
 // ── LLM error classifier ────────────────────────────────────────────────────
@@ -197,15 +263,14 @@ async function handleChat(userMessage, sessionId) {
   session.messages.push({ role: 'user', content: userMessage });
   session.turnCount++;
 
-  // Pre-fetch tools, service catalog, and warm MCP session in parallel
-  const [mcpTools, serviceCatalog] = await Promise.all([
+  // Pre-fetch tools and warm MCP session in parallel
+  const [mcpTools] = await Promise.all([
     getTools(),
-    getServiceCatalog(sessionId),
     getOrCreateSession(sessionId),
   ]);
   const openAITools = toOpenAITools(mcpTools);
 
-  // Sliding context window: send only recent messages to keep token usage flat
+  // Sliding context window
   const recent = session.messages.length > CONTEXT_WINDOW
     ? session.messages.slice(-CONTEXT_WINDOW)
     : session.messages;
@@ -214,15 +279,14 @@ async function handleChat(userMessage, sessionId) {
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     let assistantMessage;
     try {
-      assistantMessage = await chat(messages, openAITools, serviceCatalog);
+      assistantMessage = await chat(messages, openAITools);
     } catch (llmErr) {
       const classified = classifyLLMError(llmErr);
       console.error(`[LLM] ${classified.status}: ${llmErr.message}`);
       return { reply: classified.userMessage, tokenUsage: session.tokenUsage };
     }
 
-    // Accumulate token usage from this LLM call, then strip it
-    // before adding to messages (Groq rejects unknown properties)
+    // Accumulate token usage
     if (assistantMessage._tokenUsage) {
       session.tokenUsage.prompt += assistantMessage._tokenUsage.prompt;
       session.tokenUsage.completion += assistantMessage._tokenUsage.completion;
@@ -261,23 +325,20 @@ async function handleChat(userMessage, sessionId) {
       validCalls.push({ toolCall, toolInput });
     }
 
-    // Execute tool calls in parallel, with auto-chaining
+    // Execute tool calls in parallel
     const results = await Promise.all(
       validCalls.map(async ({ toolCall, toolInput }) => {
         const toolName = toolCall.function.name;
-        // Fuzzy-resolve serviceId before calling MCP (LLM often drops _0001 suffix)
+        // Fuzzy-resolve serviceId (LLM often drops _0001 suffix)
         if (toolInput.serviceId) {
           toolInput.serviceId = resolveServiceId(toolInput.serviceId);
         }
         console.log(`[MCP] Calling: ${toolName}`, JSON.stringify(toolInput));
         try {
-          let result = await callTool(sessionId, toolName, toolInput);
-
-          // Auto-chain: if this was get-entity-metadata and user wants data,
-          // also fetch the records so the LLM can respond in one shot
-          result = await tryAutoChain(sessionId, toolName, toolInput, result, userMessage);
-
-          const truncated = smartTruncate(result, 6000);
+          const result = await callTool(sessionId, toolName, toolInput);
+          // Lazily capture serviceIds from discover results
+          captureServiceIds(toolName, result);
+          const truncated = smartTruncate(result, TRUNCATE_LIMIT);
           console.log(`[MCP] Result (${toolName}): ${truncated.substring(0, 200)}`);
           return { id: toolCall.id, content: truncated };
         } catch (err) {

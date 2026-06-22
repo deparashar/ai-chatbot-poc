@@ -1,6 +1,9 @@
 {
   "xsappname": "fiori-chat-poc",
   "tenant-mode": "dedicated",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.cfapps.eu10-004.hana.ondemand.com/**"]
+  },
   "scopes": [
     { "name": "$XSAPPNAME.user", "description": "Chat user" },
     { "name": "$XSAPPNAME.admin", "description": "Admin — access logs and diagnostics" }

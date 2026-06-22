@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP AI Chat Assistant - Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+  }
+  @media print {
+    body { background: #fff; }
+    .slide { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="darkBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#172b45"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0891b2"/>
+      <stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 12 8" refX="11" refY="4" markerWidth="12" markerHeight="8" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrW" viewBox="0 0 12 8" refX="11" refY="4" markerWidth="12" markerHeight="8" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#94a3b8"/>
+    </marker>
+    <filter id="sh">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="720" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="640" y="48" text-anchor="middle" font-size="26" font-weight="700" fill="#1e3a5f" letter-spacing="-0.5">SAP AI Chat Assistant</text>
+  <text x="640" y="72" text-anchor="middle" font-size="13" fill="#94a3b8">Natural Language Interface to SAP Data via Model Context Protocol</text>
+
+  <!-- ================================================================ -->
+  <!-- ROW 1: User -> App Router -> MCP Client -> OpenAI                -->
+  <!-- Y center = 220                                                    -->
+  <!-- ================================================================ -->
+
+  <!-- USER -->
+  <g filter="url(#sh)">
+    <rect x="40" y="160" width="170" height="120" rx="12" fill="url(#darkBlue)"/>
+    <!-- User icon -->
+    <circle cx="125" cy="198" r="16" fill="none" stroke="#93c5fd" stroke-width="1.5"/>
+    <circle cx="125" cy="193" r="6" fill="#93c5fd"/>
+    <path d="M113 208 Q125 216 137 208" fill="none" stroke="#93c5fd" stroke-width="1.5"/>
+    <text x="125" y="234" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">End User</text>
+    <text x="125" y="254" text-anchor="middle" fill="#93c5fd" font-size="11">Web Browser</text>
+    <text x="125" y="270" text-anchor="middle" fill="#93c5fd" font-size="10">Fiori Chat UI</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="210" y1="220" x2="280" y2="220" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="222" y="200" width="50" height="18" rx="9" fill="#eff6ff"/>
+  <text x="247" y="213" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="600">HTTPS</text>
+
+  <!-- APP ROUTER -->
+  <g filter="url(#sh)">
+    <rect x="290" y="160" width="190" height="120" rx="12" fill="url(#blue)"/>
+    <text x="385" y="200" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">App Router</text>
+    <line x1="315" y1="212" x2="455" y2="212" stroke="#ffffff" stroke-opacity="0.15"/>
+    <text x="385" y="232" text-anchor="middle" fill="#dbeafe" font-size="11">XSUAA Authentication</text>
+    <text x="385" y="250" text-anchor="middle" fill="#dbeafe" font-size="11">Role-based Access</text>
+    <text x="385" y="268" text-anchor="middle" fill="#dbeafe" font-size="11">Route Management</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="480" y1="220" x2="550" y2="220" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="497" y="200" width="32" height="18" rx="9" fill="#eff6ff"/>
+  <text x="513" y="213" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="600">JWT</text>
+
+  <!-- MCP CLIENT -->
+  <g filter="url(#sh)">
+    <rect x="560" y="148" width="210" height="144" rx="12" fill="url(#blue)"/>
+    <text x="665" y="180" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">MCP Client Backend</text>
+    <text x="665" y="196" text-anchor="middle" fill="#93c5fd" font-size="10">Node.js / Express</text>
+    <line x1="585" y1="206" x2="745" y2="206" stroke="#ffffff" stroke-opacity="0.15"/>
+    <text x="665" y="224" text-anchor="middle" fill="#dbeafe" font-size="11">Chat Orchestration</text>
+    <text x="665" y="242" text-anchor="middle" fill="#dbeafe" font-size="11">Session Management</text>
+    <text x="665" y="260" text-anchor="middle" fill="#dbeafe" font-size="11">Data Formatting</text>
+    <text x="665" y="278" text-anchor="middle" fill="#dbeafe" font-size="11">Smart Truncation</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="770" y1="220" x2="840" y2="220" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- OPENAI -->
+  <g filter="url(#sh)">
+    <rect x="850" y="160" width="190" height="120" rx="12" fill="url(#darkBlue)"/>
+    <text x="945" y="200" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">OpenAI API</text>
+    <line x1="875" y1="212" x2="1015" y2="212" stroke="#ffffff" stroke-opacity="0.15"/>
+    <text x="945" y="232" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="500">GPT-5.4 Mini</text>
+    <text x="945" y="252" text-anchor="middle" fill="#93c5fd" font-size="11">Function Calling</text>
+    <text x="945" y="268" text-anchor="middle" fill="#93c5fd" font-size="11">Tool Orchestration</text>
+  </g>
+
+  <!-- ================================================================ -->
+  <!-- ROW 2: MCP Server + SAP System                                   -->
+  <!-- Y center = 460                                                    -->
+  <!-- ================================================================ -->
+
+  <!-- Arrow down: MCP Client -> MCP Server -->
+  <line x1="665" y1="292" x2="665" y2="378" stroke="#0891b2" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="626" y="318" width="78" height="34" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1"/>
+  <text x="665" y="332" text-anchor="middle" fill="#0891b2" font-size="9" font-weight="600">MCP</text>
+  <text x="665" y="345" text-anchor="middle" fill="#0891b2" font-size="9" font-weight="600">Protocol</text>
+
+  <!-- MCP SERVER -->
+  <g filter="url(#sh)">
+    <rect x="490" y="388" width="350" height="148" rx="12" fill="url(#teal)"/>
+    <text x="665" y="418" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">SAP MCP Server</text>
+    <text x="665" y="436" text-anchor="middle" fill="#a5f3fc" font-size="10">Model Context Protocol  |  Streamable HTTP Transport</text>
+    <line x1="515" y1="448" x2="815" y2="448" stroke="#ffffff" stroke-opacity="0.15"/>
+    <!-- 3-Level Tools -->
+    <rect x="515" y="460" width="100" height="44" rx="6" fill="rgba(255,255,255,0.12)"/>
+    <text x="565" y="478" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="600">Level 1</text>
+    <text x="565" y="496" text-anchor="middle" fill="#cffafe" font-size="9">Discover Data</text>
+
+    <rect x="625" y="460" width="100" height="44" rx="6" fill="rgba(255,255,255,0.12)"/>
+    <text x="675" y="478" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="600">Level 2</text>
+    <text x="675" y="496" text-anchor="middle" fill="#cffafe" font-size="9">Get Metadata</text>
+
+    <rect x="735" y="460" width="100" height="44" rx="6" fill="rgba(255,255,255,0.12)"/>
+    <text x="785" y="478" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="600">Level 3</text>
+    <text x="785" y="496" text-anchor="middle" fill="#cffafe" font-size="9">Execute Query</text>
+
+    <text x="665" y="526" text-anchor="middle" fill="#a5f3fc" font-size="10">3-Level Progressive Discovery  |  Reduces 200+ tools to 3</text>
+  </g>
+
+  <!-- Arrow right: MCP Server -> SAP -->
+  <line x1="840" y1="462" x2="920" y2="462" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="856" y="443" width="52" height="18" rx="9" fill="#eff6ff"/>
+  <text x="882" y="456" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="600">OData</text>
+
+  <!-- SAP SYSTEM -->
+  <g filter="url(#sh)">
+    <rect x="930" y="396" width="210" height="132" rx="12" fill="url(#slate)"/>
+    <text x="1035" y="426" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">SAP S/4HANA</text>
+    <text x="1035" y="444" text-anchor="middle" fill="#cbd5e1" font-size="10">ABAP Environment (BTP)</text>
+    <line x1="955" y1="454" x2="1115" y2="454" stroke="#ffffff" stroke-opacity="0.15"/>
+    <text x="1035" y="474" text-anchor="middle" fill="#e2e8f0" font-size="11">Business Partners</text>
+    <text x="1035" y="494" text-anchor="middle" fill="#e2e8f0" font-size="11">Billing Documents</text>
+    <text x="1035" y="514" text-anchor="middle" fill="#e2e8f0" font-size="11">Inbound Deliveries</text>
+  </g>
+
+  <!-- ================================================================ -->
+  <!-- BTP Services (bottom left)                                        -->
+  <!-- ================================================================ -->
+  <g filter="url(#sh)">
+    <rect x="40" y="396" width="190" height="132" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="135" y="424" text-anchor="middle" fill="#1e3a5f" font-size="13" font-weight="600">BTP Services</text>
+    <line x1="65" y1="436" x2="205" y2="436" stroke="#e2e8f0"/>
+    <circle cx="78" cy="458" r="4" fill="#3b82f6"/>
+    <text x="90" y="462" fill="#475569" font-size="11">XSUAA (OAuth2)</text>
+    <circle cx="78" cy="482" r="4" fill="#3b82f6"/>
+    <text x="90" y="486" fill="#475569" font-size="11">Destination Service</text>
+    <circle cx="78" cy="506" r="4" fill="#3b82f6"/>
+    <text x="90" y="510" fill="#475569" font-size="11">Connectivity</text>
+  </g>
+
+  <!-- Dashed lines from BTP Services -->
+  <line x1="230" y1="440" x2="385" y2="280" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrW)"/>
+  <line x1="230" y1="480" x2="490" y2="462" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrW)"/>
+
+  <!-- ================================================================ -->
+  <!-- FLOW STEPS (bottom)                                               -->
+  <!-- ================================================================ -->
+  <rect x="40" y="572" width="1200" height="108" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="640" y="596" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a5f">How It Works</text>
+
+  <!-- Step 1 -->
+  <circle cx="100" cy="636" r="14" fill="#1e3a5f"/>
+  <text x="100" y="641" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">1</text>
+  <text x="100" y="664" text-anchor="middle" fill="#475569" font-size="10">User asks a</text>
+  <text x="100" y="676" text-anchor="middle" fill="#475569" font-size="10">question</text>
+
+  <!-- Step 2 -->
+  <circle cx="340" cy="636" r="14" fill="#2563eb"/>
+  <text x="340" y="641" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">2</text>
+  <text x="340" y="664" text-anchor="middle" fill="#475569" font-size="10">App Router</text>
+  <text x="340" y="676" text-anchor="middle" fill="#475569" font-size="10">authenticates user</text>
+
+  <!-- Step 3 -->
+  <circle cx="580" cy="636" r="14" fill="#2563eb"/>
+  <text x="580" y="641" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">3</text>
+  <text x="580" y="664" text-anchor="middle" fill="#475569" font-size="10">AI decides which</text>
+  <text x="580" y="676" text-anchor="middle" fill="#475569" font-size="10">SAP data to fetch</text>
+
+  <!-- Step 4 -->
+  <circle cx="820" cy="636" r="14" fill="#0891b2"/>
+  <text x="820" y="641" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">4</text>
+  <text x="820" y="664" text-anchor="middle" fill="#475569" font-size="10">MCP Server queries</text>
+  <text x="820" y="676" text-anchor="middle" fill="#475569" font-size="10">SAP OData APIs</text>
+
+  <!-- Step 5 -->
+  <circle cx="1060" cy="636" r="14" fill="#64748b"/>
+  <text x="1060" y="641" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">5</text>
+  <text x="1060" y="664" text-anchor="middle" fill="#475569" font-size="10">Results formatted</text>
+  <text x="1060" y="676" text-anchor="middle" fill="#475569" font-size="10">and displayed</text>
+
+  <!-- Connecting line between steps -->
+  <line x1="118" y1="636" x2="322" y2="636" stroke="#e2e8f0" stroke-width="1.5"/>
+  <line x1="358" y1="636" x2="562" y2="636" stroke="#e2e8f0" stroke-width="1.5"/>
+  <line x1="598" y1="636" x2="802" y2="636" stroke="#e2e8f0" stroke-width="1.5"/>
+  <line x1="838" y1="636" x2="1042" y2="636" stroke="#e2e8f0" stroke-width="1.5"/>
+
+</svg>
+</div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build artifacts
+mta_archives/
+*.mtar
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+!**/.env.example
+default-env.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Generated images (HTML source files are kept)
+architecture-diagram.png
+flow-diagram.png
+
+# Temp/screenshot scripts
+screenshot*.js
+take-screenshot*.js
+take-*.js
+
+# SAP credential store local files
+creds*.json
